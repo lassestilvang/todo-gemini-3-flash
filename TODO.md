@@ -6,7 +6,7 @@
 - [x] Tailwind CSS + shadcn/ui integration
 - [x] Mobile-responsive layout (Sidebar + Drawer)
 - [x] Comprehensive Unit Tests (Logic tests passing, DB tests restricted by Bun/Better-SQLite3 env)
-- [ ] View Transition API integration
+- [x] View Transition API integration
 
 ## 📂 Lists
 - [x] "Inbox" default magic list
@@ -42,27 +42,27 @@
 
 ## 🎨 UI/UX & Design
 - [x] Clean, minimalistic dark mode (System default)
-- [ ] Manual Light/Dark theme toggle
+- [x] Manual Light/Dark theme toggle
 - [x] Visual feedback for user actions (Toasts & Animations)
 - [x] Loading states and error handling (Safe Actions & UI Feedback)
 - [x] Professional color scheme and vibrant category colors
 
 ## 🤖 World-Class AI Features (The "Gemini" Edge)
-- [ ] **AI Daily Briefing:** Start the day with a Gemini-generated priority summary and "Focus of the Day."
-- [ ] **Smart Decomposition:** "Magic Wand" button to automatically break complex tasks into actionable sub-tasks.
-- [ ] **Natural Language Entry:** "Meeting with Sarah tomorrow at 2pm" automatically sets title, date, and time.
-- [ ] **Contextual Tagging:** AI automatically suggests labels based on task content.
-- [ ] **Smart Rescheduling:** Gemini suggests the best time to move overdue tasks based on your current load.
+- [x] **AI Daily Briefing:** Start the day with a Gemini-generated priority summary and "Focus of the Day."
+- [x] **Smart Decomposition:** "Magic Wand" button to automatically break complex tasks into actionable sub-tasks.
+- [x] **Natural Language Entry:** "Meeting with Sarah tomorrow at 2pm" automatically sets title, date, and time.
+- [x] **Contextual Tagging:** AI automatically suggests labels based on task content.
+- [x] **Smart Rescheduling:** Gemini suggests the best time to move overdue tasks based on your current load.
 
 ## ⚡️ Professional Productivity Suite
-- [ ] **Zen Focus Mode:** Distraction-free interface showing only the active task with a built-in Pomodoro timer.
-- [ ] **Energy-Based Planning:** Categorize tasks by "Energy Level Required" (High/Medium/Low) to match your biology.
-- [ ] **Kanban Board View:** Toggle between list view and a professional board view for project tracking.
-- [ ] **Flow Analytics:** Interactive heatmaps and charts showing completion trends and "Actual vs. Estimated" accuracy.
-- [ ] **Keyboard-First Shortcuts:** Deep "Linear-style" keyboard support for lightning-fast task manipulation.
+- [x] **Zen Focus Mode:** Distraction-free interface showing only the active task with a built-in Pomodoro timer.
+- [x] **Energy-Based Planning:** Categorize tasks by "Energy Level Required" (High/Medium/Low) to match your biology.
+- [x] **Kanban Board View:** Toggle between list view and a professional board view for project tracking.
+- [x] **Flow Analytics:** Interactive heatmaps and charts showing completion trends and "Actual vs. Estimated" accuracy.
+- [x] **Keyboard-First Shortcuts:** Deep "Linear-style" keyboard support for lightning-fast task manipulation.
 
 ## 🌟 Stretch & Polish
-- [ ] **Voice-First Capture:** Hands-free task adding using Web Speech API.
-- [ ] **Haptic Sound Design:** Subtle, high-quality audio feedback for task completion and interactions.
-- [ ] **Glassmorphic Themes:** High-end aesthetic options with blur effects and vibrant gradients.
+- [x] **Voice-First Capture:** Hands-free task adding using Web Speech API.
+- [x] **Haptic Sound Design:** Subtle, high-quality audio feedback for task completion and interactions.
+- [x] **Glassmorphic Themes:** High-end aesthetic options with blur effects and vibrant gradients.
 - [ ] **Calendar Integration:** Two-way sync with local/iCal calendars.

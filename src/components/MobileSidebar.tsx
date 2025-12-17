@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { SidebarNav } from './SidebarNav'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import Link from 'next/link'
-import { Sun, Inbox, CalendarDays, Layers, Calendar } from 'lucide-react'
+import { Sun, Inbox, CalendarDays, Layers, Calendar, Layout, BarChart2 } from 'lucide-react'
 import type { List } from '@prisma/client'
 import { CreateListDialog } from './CreateListDialog'
 
@@ -28,6 +28,8 @@ export function MobileSidebar({ lists, counts }: MobileSidebarProps) {
         { name: 'Today', icon: Sun, href: '/today', count: counts.today },
         { name: 'Next 7 Days', icon: CalendarDays, href: '/next-7-days', count: counts.next7Days },
         { name: 'Upcoming', icon: Calendar, href: '/upcoming', count: counts.upcoming },
+        { name: 'Board', icon: Layout, href: '/board', count: 0 },
+        { name: 'Analytics', icon: BarChart2, href: '/analytics', count: 0 },
         { name: 'All Tasks', icon: Layers, href: '/all', count: counts.all },
     ]
 

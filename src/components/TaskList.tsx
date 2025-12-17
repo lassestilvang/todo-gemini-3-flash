@@ -1,20 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { TaskItem } from './TaskItem'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Plus, Calendar as CalendarIcon } from 'lucide-react'
 import { createTask } from '@/app/actions/task'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Calendar as CalendarIcon, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import * as chrono from 'chrono-node'
 import { FocusOverlay } from './FocusOverlay'
 import { AnimatePresence } from 'framer-motion'
+import { Badge } from '@/components/ui/badge'
+import { AIBriefing } from './AIBriefing'
+import { RescheduleSuggestions } from './RescheduleSuggestions'
+import { VoiceCapture } from './VoiceCapture'
+import { useSound } from '@/lib/hooks/use-sound'
 
 interface TaskListProps {
     tasks: {
@@ -25,15 +29,13 @@ interface TaskListProps {
         date: Date | null
         deadline: Date | null
         priority: string
+        energyLevel: string | null
         recurrence: string | null
         estimate: number | null
         actual: number | null
         list: { name: string, color: string | null }
         labels: { id: string; name: string; color: string | null }[]
         subTasks?: { id: string; title: string; isCompleted: boolean }[]
-        attachments?: { id: string; name: string; url: string }[]
-        reminders?: { id: string; time: Date }[]
-        logs?: { id: string; action: string; details: string | null; timestamp: Date }[]
         createdAt: Date
     }[]
     listId?: string
@@ -44,19 +46,15 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
     const [newTaskTitle, setNewTaskTitle] = useState("")
     const [date, setDate] = useState<Date | undefined>(undefined)
     const [showCompleted, setShowCompleted] = useState(true)
-    const [focusedTask, setFocusedTask] = useState<any | null>(null)
+    const [focusedTask, setFocusedTask] = useState<TaskListProps['tasks'][number] | null>(null)
+    const { playSound } = useSound()
 
-    // NLP Preview
-    const [nlpPreview, setNlpPreview] = useState<{ date: Date | null, priority: string } | null>(null)
-
-    useEffect(() => {
-        if (!newTaskTitle.trim()) {
-            setNlpPreview(null)
-            return
-        }
+    // NLP Preview via useMemo to avoid cascading renders
+    const nlpPreview = useMemo(() => {
+        if (!newTaskTitle.trim()) return null
 
         const results = chrono.parse(newTaskTitle)
-        let detectedDate = results.length > 0 ? results[0].start.date() : null
+        const detectedDate = results.length > 0 ? results[0].start.date() : null
         
         let detectedPriority = "NONE"
         if (newTaskTitle.includes('!!high') || newTaskTitle.includes('p1')) detectedPriority = "HIGH"
@@ -64,10 +62,9 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
         else if (newTaskTitle.includes('!!low') || newTaskTitle.includes('p3')) detectedPriority = "LOW"
 
         if (detectedDate || detectedPriority !== "NONE") {
-            setNlpPreview({ date: detectedDate, priority: detectedPriority })
-        } else {
-            setNlpPreview(null)
+            return { date: detectedDate, priority: detectedPriority }
         }
+        return null
     }, [newTaskTitle])
 
     const handleAddTask = async (e: React.FormEvent) => {
@@ -84,6 +81,7 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
         if (result.error) {
             toast.error(result.error)
         } else {
+            playSound('click')
             setNewTaskTitle("")
             setDate(undefined)
             toast.success("Task created")
@@ -107,6 +105,13 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
                 </Button>
             </header>
 
+            {title === "Today" && (
+                <div className="space-y-4 mb-8">
+                    <AIBriefing />
+                    <RescheduleSuggestions />
+                </div>
+            )}
+
             <form onSubmit={handleAddTask} className="space-y-2">
                 <div className="flex gap-2 items-center">
                     <div className="relative flex-1">
@@ -114,26 +119,29 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
                             placeholder="Add a task (e.g. Lunch tomorrow !!high)" 
                             value={newTaskTitle}
                             onChange={(e) => setNewTaskTitle(e.target.value)}
-                            className="pr-10"
+                            className="pr-20"
                         />
-                        {nlpPreview && (
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 pointer-events-none">
-                                {nlpPreview.date && (
-                                    <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5">
-                                        <CalendarIcon className="w-3 h-3 mr-1" />
-                                        {format(nlpPreview.date, "MMM d")}
-                                    </Badge>
-                                )}
-                                {nlpPreview.priority !== "NONE" && (
-                                    <Badge variant="outline" className={cn(
-                                        "text-[10px] px-1 py-0 h-5",
-                                        nlpPreview.priority === "HIGH" ? "bg-red-500/10 text-red-500 border-red-500/20" : ""
-                                    )}>
-                                        {nlpPreview.priority}
-                                    </Badge>
-                                )}
-                            </div>
-                        )}
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <VoiceCapture onResult={(text) => setNewTaskTitle(prev => prev ? `${prev} ${text}` : text)} />
+                            {nlpPreview && (
+                                <div className="flex gap-1 pointer-events-none">
+                                    {nlpPreview.date && (
+                                        <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5 whitespace-nowrap">
+                                            <CalendarIcon className="w-3 h-3 mr-1" />
+                                            {format(nlpPreview.date, "MMM d")}
+                                        </Badge>
+                                    )}
+                                    {nlpPreview.priority !== "NONE" && (
+                                        <Badge variant="outline" className={cn(
+                                            "text-[10px] px-1 py-0 h-5",
+                                            nlpPreview.priority === "HIGH" ? "bg-red-500/10 text-red-500 border-red-500/20" : ""
+                                        )}>
+                                            {nlpPreview.priority}
+                                        </Badge>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <Popover>
                         <PopoverTrigger asChild>

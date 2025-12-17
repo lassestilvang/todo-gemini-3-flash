@@ -12,8 +12,8 @@ import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Checkbox } from './ui/checkbox'
 import { Button } from './ui/button'
-import { Trash2, Plus, X, Loader2, Calendar as CalendarIcon } from 'lucide-react'
 import { updateTask, createSubTask, toggleSubTask, deleteSubTask, deleteTask, getLabels, addLabelToTask, removeLabelFromTask, addAttachment, deleteAttachment, addReminder, deleteReminder } from '@/app/actions/task'
+import { decomposeTask, suggestLabels } from '@/app/actions/ai'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -21,7 +21,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
 import { Badge } from './ui/badge'
 import { toast } from 'sonner'
-import { Paperclip, Bell, History } from 'lucide-react'
+import { Paperclip, Bell, History, Sparkles, Loader2, X, Trash2, Plus, Calendar as CalendarIcon } from 'lucide-react'
 
 type TaskWithSubtasks = {
     id: string
@@ -31,6 +31,7 @@ type TaskWithSubtasks = {
     date: Date | null
     deadline: Date | null
     priority: string
+    energyLevel: "LOW" | "MEDIUM" | "HIGH" | null
     recurrence: string | null
     estimate: number | null
     actual: number | null
@@ -73,19 +74,25 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
         title: string
         description: string
         priority: string
+        energyLevel: "LOW" | "MEDIUM" | "HIGH"
         recurrence: string
         estimate: string
         actual: string
-    }>({
+    }>(
+        {
         title: task?.title || '',
         description: task?.description || '',
         priority: task?.priority || 'NONE',
+        energyLevel: (task?.energyLevel as "LOW" | "MEDIUM" | "HIGH") || 'MEDIUM',
         recurrence: task?.recurrence || 'NONE',
         estimate: task?.estimate?.toString() || '',
         actual: task?.actual?.toString() || ''
     })
+
     const [newSubTaskTitle, setNewSubTaskTitle] = useState('')
     const [isUpdating, setIsUpdating] = useState(false)
+    const [isDecomposing, setIsDecomposing] = useState(false)
+    const [isSuggestingLabels, setIsSuggestingLabels] = useState(false)
     const [allLabels, setAllLabels] = useState<{ id: string; name: string; color: string | null }[]>([])
 
     // Labels still need to be fetched, but we can do it once on mount
@@ -107,8 +114,51 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
         setIsUpdating(false)
     }
 
+    const handleDecompose = async () => {
+        setIsDecomposing(true)
+        const result = await decomposeTask({
+            taskId: task.id,
+            taskTitle: task.title,
+            taskDescription: task.description
+        })
+        if (result.error) {
+            toast.error(result.error)
+        }
+        setIsDecomposing(false)
+    }
+
+    const handleSuggestLabels = async () => {
+        setIsSuggestingLabels(true)
+        const result = await suggestLabels({
+            taskTitle: task.title,
+            taskDescription: task.description,
+            availableLabels: allLabels.map(l => ({ id: l.id, name: l.name }))
+        })
+        
+        if (result.error) {
+            toast.error(result.error)
+        } else if (result.data) {
+            const suggestedIds = result.data
+            // Add those that aren't already attached
+            const currentIds = task.labels?.map(l => l.id) || []
+            const newIds = suggestedIds.filter(id => !currentIds.includes(id))
+            
+            for (const id of newIds) {
+                await addLabelToTask(task.id, id)
+            }
+            
+            if (newIds.length > 0) {
+                toast.success(`Suggested labels added!`)
+            }
+        } else {
+            toast.info("Gemini suggests the current labels are best.")
+        }
+        setIsSuggestingLabels(false)
+    }
+
     const handleFieldChange = (field: keyof typeof formState, value: string) => {
-        setFormState(prev => ({ ...prev, [field]: value }))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setFormState(prev => ({ ...prev, [field]: value as any }))
     }
 
     const handleAddSubTask = async (e: React.FormEvent) => {
@@ -117,7 +167,7 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
         try {
             await createSubTask(task.id, newSubTaskTitle)
             setNewSubTaskTitle('')
-        } catch (_error) {
+        } catch {
             toast.success("Added subtask") // Actually it revalidates, so it's fine
         }
     }
@@ -209,47 +259,68 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
                             </Select>
                         </div>
     
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-medium">Estimate (min)</label>
-                                                    <Input 
-                                                        type="number" 
-                                                        value={formState.estimate} 
-                                                        onChange={(e) => handleFieldChange('estimate', e.target.value)}
-                                                        onBlur={() => formState.estimate !== (task.estimate?.toString() || '') && handleUpdate({ estimate: parseInt(formState.estimate) || null })}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-medium">Actual (min)</label>
-                                                    <Input 
-                                                        type="number" 
-                                                        value={formState.actual} 
-                                                        onChange={(e) => handleFieldChange('actual', e.target.value)}
-                                                        onBlur={() => formState.actual !== (task.actual?.toString() || '') && handleUpdate({ actual: parseInt(formState.actual) || null })}
-                                                    />
-                                                </div>
-                                            </div>
-                        
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">Recurrence</label>                            <Select 
-                                value={formState.recurrence} 
-                                onValueChange={(val) => {
-                                    handleFieldChange('recurrence', val)
-                                    handleUpdate({ recurrence: val === 'NONE' ? null : val })
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Energy Level</label>
+                            <Select 
+                                value={formState.energyLevel} 
+                                onValueChange={(val: "LOW" | "MEDIUM" | "HIGH") => {
+                                    handleFieldChange('energyLevel', val)
+                                    handleUpdate({ energyLevel: val })
                                 }}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Set Recurrence" />
+                                    <SelectValue placeholder="Set Energy" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="NONE">None</SelectItem>
-                                    <SelectItem value="DAILY">Daily</SelectItem>
-                                    <SelectItem value="WEEKLY">Weekly</SelectItem>
-                                    <SelectItem value="WEEKDAYS">Every Weekday</SelectItem>
-                                    <SelectItem value="MONTHLY">Monthly</SelectItem>
-                                    <SelectItem value="YEARLY">Yearly</SelectItem>
+                                    <SelectItem value="LOW">Low (Easy)</SelectItem>
+                                    <SelectItem value="MEDIUM">Medium (Balanced)</SelectItem>
+                                    <SelectItem value="HIGH">High (Intense)</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Recurrence</label>
+                        <Select 
+                            value={formState.recurrence} 
+                            onValueChange={(val) => {
+                                handleFieldChange('recurrence', val)
+                                handleUpdate({ recurrence: val === 'NONE' ? null : val })
+                            }}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Set Recurrence" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="NONE">None</SelectItem>
+                                <SelectItem value="DAILY">Daily</SelectItem>
+                                <SelectItem value="WEEKLY">Weekly</SelectItem>
+                                <SelectItem value="WEEKDAYS">Every Weekday</SelectItem>
+                                <SelectItem value="MONTHLY">Monthly</SelectItem>
+                                <SelectItem value="YEARLY">Yearly</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Estimate (min)</label>
+                            <Input 
+                                type="number" 
+                                value={formState.estimate} 
+                                onChange={(e) => handleFieldChange('estimate', e.target.value)}
+                                onBlur={() => formState.estimate !== (task.estimate?.toString() || '') && handleUpdate({ estimate: parseInt(formState.estimate) || null })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Actual (min)</label>
+                            <Input 
+                                type="number" 
+                                value={formState.actual} 
+                                onChange={(e) => handleFieldChange('actual', e.target.value)}
+                                onBlur={() => formState.actual !== (task.actual?.toString() || '') && handleUpdate({ actual: parseInt(formState.actual) || null })}
+                            />
                         </div>
                     </div>
 
@@ -307,7 +378,19 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Labels</label>
+                        <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium">Labels</label>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-primary hover:bg-primary/10" 
+                                onClick={handleSuggestLabels}
+                                disabled={isSuggestingLabels || allLabels.length === 0}
+                            >
+                                {isSuggestingLabels ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
+                                Suggest with AI
+                            </Button>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                             {allLabels.map((label) => {
                                 const isAttached = task.labels?.some(l => l.id === label.id)
@@ -329,7 +412,19 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
                     </div>
 
                     <div className="space-y-4">
-                        <label className="text-sm font-medium">Subtasks</label>
+                        <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium">Subtasks</label>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-primary hover:bg-primary/10" 
+                                onClick={handleDecompose}
+                                disabled={isDecomposing}
+                            >
+                                {isDecomposing ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
+                                Break down with AI
+                            </Button>
+                        </div>
                         <div className="space-y-2">
                             {task.subTasks?.map((st) => (
                                 <div key={st.id} className="flex items-center gap-2 group">
@@ -366,7 +461,7 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
                             </form>
                         </div>
                     </div>
-                    
+
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <label className="text-sm font-medium flex items-center gap-2">

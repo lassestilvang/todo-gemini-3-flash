@@ -3,13 +3,14 @@ import { getLists } from '@/app/actions/list'
 import { getTaskCounts, getLabels } from '@/app/actions/task'
 import { SidebarNav } from './SidebarNav'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Calendar, Sun, Inbox, CalendarDays, Layers, Tag } from 'lucide-react'
+import { Calendar, Sun, Inbox, CalendarDays, Layers, Tag, Layout, BarChart2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { CommandMenu } from './CommandMenu'
 import { CreateListDialog } from './CreateListDialog'
 import { CreateLabelDialog } from './CreateLabelDialog'
 
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from './ThemeToggle'
 
 export async function Sidebar() {
   const [lists, counts, labels] = await Promise.all([
@@ -23,13 +24,18 @@ export async function Sidebar() {
     { name: 'Today', icon: Sun, href: '/today', count: counts.today },
     { name: 'Next 7 Days', icon: CalendarDays, href: '/next-7-days', count: counts.next7Days },
     { name: 'Upcoming', icon: Calendar, href: '/upcoming', count: counts.upcoming },
+    { name: 'Board', icon: Layout, href: '/board', count: 0 },
+    { name: 'Analytics', icon: BarChart2, href: '/analytics', count: 0 },
     { name: 'All Tasks', icon: Layers, href: '/all', count: counts.all },
   ]
 
   return (
-    <div className="h-screen w-64 border-r bg-muted/10 flex flex-col hidden md:flex">
+    <div className="h-screen w-64 border-r bg-muted/10 glass flex flex-col hidden md:flex">
       <div className="p-4 border-b">
-        <h1 className="font-bold text-xl tracking-tight mb-4">Gemini Tasks</h1>
+        <div className="flex items-center justify-between mb-4">
+            <h1 className="font-bold text-xl tracking-tight">Gemini Tasks</h1>
+            <ThemeToggle />
+        </div>
         <CommandMenu />
       </div>
       

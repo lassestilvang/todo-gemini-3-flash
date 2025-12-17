@@ -23,13 +23,16 @@ export function FocusOverlay({ task, onClose }: FocusOverlayProps) {
             interval = setInterval(() => {
                 setTimeLeft((time) => time - 1)
             }, 1000)
-        } else if (timeLeft === 0) {
-            if (interval) clearInterval(interval)
-            toast.success("Focus session complete!")
-            setIsActive(false)
         }
         return () => { if (interval) clearInterval(interval) }
     }, [isActive, timeLeft])
+
+    useEffect(() => {
+        if (timeLeft === 0 && isActive) {
+            toast.success("Focus session complete!")
+            setTimeout(() => setIsActive(false), 0)
+        }
+    }, [timeLeft, isActive])
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60)
@@ -111,5 +114,3 @@ export function FocusOverlay({ task, onClose }: FocusOverlayProps) {
         </motion.div>
     )
 }
-
-import { Badge } from './ui/badge'

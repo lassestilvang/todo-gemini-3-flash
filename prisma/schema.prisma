@@ -38,6 +38,7 @@ model Task {
 
   // Meta
   priority    String    @default("NONE") // NONE, LOW, MEDIUM, HIGH
+  energyLevel String?   @default("MEDIUM") // LOW, MEDIUM, HIGH
   isCompleted Boolean   @default(false)
   
   // Recurrence

@@ -13,7 +13,8 @@ const createTaskSchema = z.object({
     listId: z.string().uuid().optional(),
     date: z.date().nullable().optional(),
     description: z.string().max(2000).nullable().optional(),
-    priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]).default("NONE")
+    priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]).default("NONE"),
+    energyLevel: z.enum(["LOW", "MEDIUM", "HIGH"]).optional()
 })
 
 function parseNLP(input: string) {
@@ -54,6 +55,7 @@ const updateTaskSchema = z.object({
     date: z.date().nullable().optional(),
     deadline: z.date().nullable().optional(),
     priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]).optional(),
+    energyLevel: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
     isCompleted: z.boolean().optional(),
     recurrence: z.string().nullable().optional(),
     estimate: z.number().nullable().optional(),
@@ -200,7 +202,8 @@ export const createTask = createSafeAction(createTaskSchema, async (data) => {
             listId,
             date: finalDate,
             description: data.description,
-            priority: finalPriority
+            priority: finalPriority,
+            energyLevel: data.energyLevel || "MEDIUM"
         }
     })
     
@@ -423,4 +426,57 @@ export async function searchTasks(query: string) {
             list: { select: { name: true } }
         }
     })
+}
+
+export async function getAnalytics() {
+    const now = new Date()
+    const last7Days = new Date(now)
+    last7Days.setDate(now.getDate() - 7)
+
+    const [allTasks, completedLast7Days] = await Promise.all([
+        prisma.task.findMany({
+            include: { list: true }
+        }),
+        prisma.task.findMany({
+            where: {
+                isCompleted: true,
+                updatedAt: { gte: last7Days }
+            }
+        })
+    ])
+
+    // Group completions by day
+    const completionTrend = Array.from({ length: 7 }).map((_, i) => {
+        const d = new Date()
+        d.setDate(d.getDate() - (6 - i))
+        const dateStr = d.toLocaleDateString('en-US', { weekday: 'short' })
+        const count = completedLast7Days.filter(t => 
+            new Date(t.updatedAt).toDateString() === d.toDateString()
+        ).length
+        return { name: dateStr, count }
+    })
+
+    // Group by priority
+    const byPriority = [
+        { name: 'High', value: allTasks.filter(t => t.priority === 'HIGH').length, fill: '#ef4444' },
+        { name: 'Medium', value: allTasks.filter(t => t.priority === 'MEDIUM').length, fill: '#3b82f6' },
+        { name: 'Low', value: allTasks.filter(t => t.priority === 'LOW').length, fill: '#94a3b8' },
+        { name: 'None', value: allTasks.filter(t => t.priority === 'NONE').length, fill: '#cbd5e1' },
+    ]
+
+    // Time stats
+    const totalEstimate = allTasks.reduce((acc, t) => acc + (t.estimate || 0), 0)
+    const totalActual = allTasks.reduce((acc, t) => acc + (t.actual || 0), 0)
+
+    return {
+        completionTrend,
+        byPriority,
+        stats: {
+            totalTasks: allTasks.length,
+            completedTasks: allTasks.filter(t => t.isCompleted).length,
+            pendingTasks: allTasks.filter(t => !t.isCompleted).length,
+            totalEstimate,
+            totalActual
+        }
+    }
 }
