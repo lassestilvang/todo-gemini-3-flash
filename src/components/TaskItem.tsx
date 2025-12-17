@@ -6,9 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { toggleTask, deleteTask } from '@/app/actions/task'
-import { Calendar, Trash2 } from 'lucide-react'
+import { Calendar, Trash2, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TaskDetail } from './TaskDetail'
+import { toast } from 'sonner'
 
 // Type definition to match Prisma include
 type TaskWithDetails = {
@@ -20,29 +21,45 @@ type TaskWithDetails = {
     deadline: Date | null
     priority: string
     recurrence: string | null
+    estimate: number | null
+    actual: number | null
     list: { name: string, color: string | null }
     labels: { id: string, name: string, color: string | null }[]
     subTasks?: { id: string; title: string; isCompleted: boolean }[]
+    attachments?: { id: string; name: string; url: string }[]
+    reminders?: { id: string; time: Date }[]
+    logs?: { id: string; action: string; details: string | null; timestamp: Date }[]
     createdAt: Date
 }
 
 interface TaskItemProps {
     task: TaskWithDetails
+    onFocus?: (task: TaskWithDetails) => void
 }
 
-export function TaskItem({ task }: TaskItemProps) {
+export function TaskItem({ task, onFocus }: TaskItemProps) {
     const [completed, setCompleted] = useState(task.isCompleted)
     const [detailOpen, setDetailOpen] = useState(false)
 
     const handleToggle = async (checked: boolean) => {
         setCompleted(checked)
-        await toggleTask(task.id, checked)
+        try {
+            await toggleTask(task.id, checked)
+        } catch (_error) {
+            setCompleted(!checked)
+            toast.error("Failed to update task")
+        }
     }
 
     const handleDelete = async (e: React.MouseEvent) => {
         e.stopPropagation()
         if(confirm("Are you sure?")) {
-            await deleteTask(task.id)
+            const result = await deleteTask({ id: task.id })
+            if (result.error) {
+                toast.error(result.error)
+            } else {
+                toast.success("Task deleted")
+            }
         }
     }
 
@@ -59,7 +76,7 @@ export function TaskItem({ task }: TaskItemProps) {
                     onClick={(e) => e.stopPropagation()}
                     className="rounded-full w-5 h-5"
                 />
-                <div className="flex flex-col">
+                <div className="flex flex-col text-left">
                     <span className={cn(
                         "font-medium",
                         completed && "line-through text-muted-foreground"
@@ -76,7 +93,7 @@ export function TaskItem({ task }: TaskItemProps) {
                         {task.date && (
                             <span className={cn(
                                 "flex items-center gap-1",
-                                task.date < new Date() && !completed ? "text-red-500" : ""
+                                new Date(task.date) < new Date() && !completed ? "text-red-500" : ""
                             )}>
                                 <Calendar className="w-3 h-3" />
                                 {format(new Date(task.date), "MMM d")}
@@ -95,14 +112,24 @@ export function TaskItem({ task }: TaskItemProps) {
                 </div>
             </div>
             
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {!completed && onFocus && (
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-primary hover:bg-primary/10" 
+                        onClick={(e) => { e.stopPropagation(); onFocus(task) }}
+                    >
+                        <Play className="w-4 h-4 fill-current" />
+                    </Button>
+                )}
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleDelete}>
                     <Trash2 className="w-4 h-4" />
                 </Button>
             </div>
         </div>
         
-        <TaskDetail task={task} open={detailOpen} onOpenChange={setDetailOpen} />
+        <TaskDetail key={task.id} task={task} open={detailOpen} onOpenChange={setDetailOpen} />
         </>
     )
 }

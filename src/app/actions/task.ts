@@ -3,6 +3,64 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { RRule } from 'rrule'
+import { z } from 'zod'
+import { createSafeAction, ActionError } from '@/lib/actions/utils'
+import * as chrono from 'chrono-node'
+
+// Validation Schemas
+const createTaskSchema = z.object({
+    title: z.string().min(1, "Title is required").max(200),
+    listId: z.string().uuid().optional(),
+    date: z.date().nullable().optional(),
+    description: z.string().max(2000).nullable().optional(),
+    priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]).default("NONE")
+})
+
+function parseNLP(input: string) {
+    let title = input
+    let date: Date | null = null
+    let priority: "NONE" | "LOW" | "MEDIUM" | "HIGH" = "NONE"
+
+    // Parse Priority (e.g., !!high, !!med, !!low or p1, p2, p3)
+    if (title.includes('!!high') || title.includes('p1')) {
+        priority = "HIGH"
+        title = title.replace(/!!high|p1/gi, '')
+    } else if (title.includes('!!med') || title.includes('p2')) {
+        priority = "MEDIUM"
+        title = title.replace(/!!med|p2/gi, '')
+    } else if (title.includes('!!low') || title.includes('p3')) {
+        priority = "LOW"
+        title = title.replace(/!!low|p3/gi, '')
+    }
+
+    // Parse Date
+    const results = chrono.parse(title)
+    if (results.length > 0) {
+        date = results[0].start.date()
+        title = title.replace(results[0].text, '')
+    }
+
+    return {
+        title: title.trim().replace(/\s+/g, ' '),
+        date,
+        priority
+    }
+}
+
+const updateTaskSchema = z.object({
+    id: z.string().uuid(),
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(2000).nullable().optional(),
+    date: z.date().nullable().optional(),
+    deadline: z.date().nullable().optional(),
+    priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]).optional(),
+    isCompleted: z.boolean().optional(),
+    recurrence: z.string().nullable().optional(),
+    estimate: z.number().nullable().optional(),
+    actual: z.number().nullable().optional()
+})
+
+const deleteSchema = z.object({ id: z.string().uuid() })
 
 export async function getTasks(filter: { 
     listId?: string, 
@@ -50,20 +108,36 @@ export async function getTasks(filter: {
       }
   }
 
-  // "All" just returns everything, maybe exclude completed? 
-  // For now let's return everything sorted by date.
-
+  // Optimization: Select only needed fields if performance becomes an issue,
+  // but for now include is fine for this scale.
   return await prisma.task.findMany({
     where,
     orderBy: [
-        { isCompleted: 'asc' }, // Pending first
-        { date: 'asc' }, // Earliest first
+        { isCompleted: 'asc' },
+        { priority: 'desc' }, // Higher priority first
+        { date: 'asc' },
         { createdAt: 'desc' }
     ],
     include: {
-        list: true,
-        labels: true,
-        subTasks: true
+        list: {
+            select: { name: true, color: true }
+        },
+        labels: {
+            select: { id: true, name: true, color: true }
+        },
+        subTasks: {
+            select: { id: true, title: true, isCompleted: true }
+        },
+        attachments: {
+            select: { id: true, name: true, url: true }
+        },
+        reminders: {
+            select: { id: true, time: true }
+        },
+        logs: {
+            orderBy: { timestamp: 'desc' },
+            take: 10
+        }
     }
   })
 }
@@ -99,114 +173,137 @@ export async function getTaskCounts() {
     return { inbox, today, next7Days, upcoming, all, overdue }
 }
 
-export async function createTask(data: {
-    title: string,
-    listId?: string,
-    date?: Date,
-    description?: string,
-    priority?: string
-}) {
+async function logActivity(taskId: string, action: string, details?: string) {
+    await prisma.activityLog.create({
+        data: { taskId, action, details }
+    })
+}
+
+export const createTask = createSafeAction(createTaskSchema, async (data) => {
     let listId = data.listId
     
+    const nlp = parseNLP(data.title)
+    const finalTitle = nlp.title || data.title
+    const finalDate = data.date || nlp.date
+    const finalPriority = data.priority !== "NONE" ? data.priority : nlp.priority
+
     if (!listId) {
         const inbox = await prisma.list.findFirst({ where: { isDefault: true }})
         listId = inbox?.id
     }
 
-    if (!listId) throw new Error("No list found")
+    if (!listId) throw new ActionError("No list found")
 
     const task = await prisma.task.create({
         data: {
-            title: data.title,
+            title: finalTitle,
             listId,
-            date: data.date,
+            date: finalDate,
             description: data.description,
-            priority: data.priority || "NONE"
+            priority: finalPriority
         }
     })
     
+    await logActivity(task.id, "CREATED", `Task "${task.title}" created via ${nlp.date ? 'NLP' : 'Standard'}`)
     revalidatePath('/')
     return task
-}
+})
 
 export async function toggleTask(id: string, isCompleted: boolean) {
-    const task = await prisma.task.update({
-        where: { id },
-        data: { isCompleted },
-        include: {
-            labels: true,
-            subTasks: true
-        }
-    })
+    try {
+        const task = await prisma.task.update({
+            where: { id },
+            data: { isCompleted },
+            include: {
+                labels: true,
+                subTasks: true
+            }
+        })
 
-    if (isCompleted && task.recurrence && task.date) {
-        let rule: RRule | null = null
-        const date = new Date(task.date)
+        await logActivity(task.id, isCompleted ? "COMPLETED" : "UNCOMPLETED")
 
-        switch (task.recurrence) {
-            case 'DAILY':
-                rule = new RRule({ freq: RRule.DAILY, dtstart: date })
-                break
-            case 'WEEKLY':
-                rule = new RRule({ freq: RRule.WEEKLY, dtstart: date })
-                break
-            case 'WEEKDAYS':
-                rule = new RRule({ freq: RRule.WEEKLY, byweekday: [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR], dtstart: date })
-                break
-            case 'MONTHLY':
-                rule = new RRule({ freq: RRule.MONTHLY, dtstart: date })
-                break
-            case 'YEARLY':
-                rule = new RRule({ freq: RRule.YEARLY, dtstart: date })
-                break
-        }
+        if (isCompleted && task.recurrence && task.date) {
+            let rule: RRule | null = null
+            const date = new Date(task.date)
 
-        if (rule) {
-            const nextDate = rule.after(date)
-            if (nextDate) {
-                // Create next occurrence
-                await prisma.task.create({
-                    data: {
-                        title: task.title,
-                        description: task.description,
-                        date: nextDate,
-                        priority: task.priority,
-                        listId: task.listId,
-                        recurrence: task.recurrence,
-                        labels: {
-                            connect: task.labels.map(l => ({ id: l.id }))
-                        },
-                        subTasks: {
-                            create: task.subTasks.map(st => ({
-                                title: st.title,
-                                isCompleted: false
-                            }))
+            switch (task.recurrence) {
+                case 'DAILY':
+                    rule = new RRule({ freq: RRule.DAILY, dtstart: date })
+                    break
+                case 'WEEKLY':
+                    rule = new RRule({ freq: RRule.WEEKLY, dtstart: date })
+                    break
+                case 'WEEKDAYS':
+                    rule = new RRule({ freq: RRule.WEEKLY, byweekday: [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR], dtstart: date })
+                    break
+                case 'MONTHLY':
+                    rule = new RRule({ freq: RRule.MONTHLY, dtstart: date })
+                    break
+                case 'YEARLY':
+                    rule = new RRule({ freq: RRule.YEARLY, dtstart: date })
+                    break
+            }
+
+            if (rule) {
+                const nextDate = rule.after(date)
+                if (nextDate) {
+                    await prisma.task.create({
+                        data: {
+                            title: task.title,
+                            description: task.description,
+                            date: nextDate,
+                            priority: task.priority,
+                            listId: task.listId,
+                            recurrence: task.recurrence,
+                            labels: {
+                                connect: task.labels.map(l => ({ id: l.id }))
+                            },
+                            subTasks: {
+                                create: task.subTasks.map(st => ({
+                                    title: st.title,
+                                    isCompleted: false
+                                }))
+                            }
                         }
-                    }
-                })
+                    })
+                }
             }
         }
+
+        revalidatePath('/')
+    } catch (error) {
+        console.error("Toggle Task Error:", error)
+        throw new ActionError("Failed to toggle task")
+    }
+}
+
+export const updateTask = createSafeAction(updateTaskSchema, async (data) => {
+    const { id, ...rest } = data
+    
+    // Fetch current state to compare for logging
+    const current = await prisma.task.findUnique({ where: { id } })
+    if (!current) throw new ActionError("Task not found")
+
+    const task = await prisma.task.update({
+        where: { id },
+        data: rest
+    })
+
+    // Log changes
+    const changes = []
+    if (rest.title && rest.title !== current.title) changes.push(`title to "${rest.title}"`)
+    if (rest.priority && rest.priority !== current.priority) changes.push(`priority to ${rest.priority}`)
+    if (rest.isCompleted !== undefined && rest.isCompleted !== current.isCompleted) changes.push(rest.isCompleted ? 'completed' : 'uncompleted')
+    if (rest.estimate !== undefined && rest.estimate !== current.estimate) changes.push(`estimate to ${rest.estimate}m`)
+    if (rest.actual !== undefined && rest.actual !== current.actual) changes.push(`actual time to ${rest.actual}m`)
+    
+    if (changes.length > 0) {
+        await logActivity(id, "UPDATED", `Updated ${changes.join(', ')}`)
     }
 
     revalidatePath('/')
-}
-
-export async function updateTask(id: string, data: {
-    title?: string,
-    description?: string | null,
-    date?: Date | null,
-    deadline?: Date | null,
-    priority?: string,
-    isCompleted?: boolean,
-    recurrence?: string | null
-}) {
-    const task = await prisma.task.update({
-        where: { id },
-        data
-    })
-    revalidatePath('/')
     return task
-}
+})
 
 export async function createSubTask(taskId: string, title: string) {
     const subTask = await prisma.subTask.create({
@@ -270,16 +367,51 @@ export async function removeLabelFromTask(taskId: string, labelId: string) {
     revalidatePath('/')
 }
 
-export async function deleteTask(id: string) {
-    await prisma.task.delete({ where: { id }})
+export async function getActivityLogs(taskId: string) {
+    return await prisma.activityLog.findMany({
+        where: { taskId },
+        orderBy: { timestamp: 'desc' }
+    })
+}
+
+export async function addAttachment(taskId: string, name: string, url: string) {
+    const attachment = await prisma.attachment.create({
+        data: { taskId, name, url }
+    })
+    await logActivity(taskId, "ATTACHMENT_ADDED", `Added attachment "${name}"`)
+    revalidatePath('/')
+    return attachment
+}
+
+export async function deleteAttachment(id: string) {
+    const attachment = await prisma.attachment.delete({ where: { id }})
+    await logActivity(attachment.taskId, "ATTACHMENT_DELETED", `Deleted attachment "${attachment.name}"`)
     revalidatePath('/')
 }
+
+export async function addReminder(taskId: string, time: Date) {
+    const reminder = await prisma.reminder.create({
+        data: { taskId, time }
+    })
+    await logActivity(taskId, "REMINDER_ADDED", `Set reminder for ${time.toLocaleString()}`)
+    revalidatePath('/')
+    return reminder
+}
+
+export async function deleteReminder(id: string) {
+    const reminder = await prisma.reminder.delete({ where: { id }})
+    await logActivity(reminder.taskId, "REMINDER_DELETED", "Deleted reminder")
+    revalidatePath('/')
+}
+
+export const deleteTask = createSafeAction(deleteSchema, async (data) => {
+    await prisma.task.delete({ where: { id: data.id }})
+    revalidatePath('/')
+})
 
 export async function searchTasks(query: string) {
     if (!query) return []
     
-    // We fetch all tasks for client-side fuzzy search, or use prisma search if it's supported
-    // For local SQLite, we'll fetch recently created/updated tasks or just search by title
     return await prisma.task.findMany({
         where: {
             title: {
@@ -288,7 +420,7 @@ export async function searchTasks(query: string) {
         },
         take: 10,
         include: {
-            list: true
+            list: { select: { name: true } }
         }
     })
 }

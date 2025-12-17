@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
 import { getLists } from "@/app/actions/list";
 import { getTaskCounts } from "@/app/actions/task";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +47,7 @@ export default async function RootLayout({
                 {children}
              </div>
         </main>
+        <Toaster />
       </body>
     </html>
   );
