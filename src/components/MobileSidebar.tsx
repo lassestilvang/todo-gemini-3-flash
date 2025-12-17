@@ -6,19 +6,29 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { SidebarNav } from './SidebarNav'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import Link from 'next/link'
-import { ListPlus, Sun, Inbox, CalendarDays, Layers } from 'lucide-react'
+import { Sun, Inbox, CalendarDays, Layers, Calendar } from 'lucide-react'
 import type { List } from '@prisma/client'
+import { CreateListDialog } from './CreateListDialog'
 
 interface MobileSidebarProps {
     lists: List[]
+    counts: {
+        inbox: number
+        today: number
+        next7Days: number
+        upcoming: number
+        all: number
+        overdue: number
+    }
 }
 
-export function MobileSidebar({ lists }: MobileSidebarProps) {
+export function MobileSidebar({ lists, counts }: MobileSidebarProps) {
     const defaultLinks = [
-        { name: 'Inbox', icon: Inbox, href: '/', count: 0 },
-        { name: 'Today', icon: Sun, href: '/today', count: 0 },
-        { name: 'Next 7 Days', icon: CalendarDays, href: '/upcoming', count: 0 },
-        { name: 'All Tasks', icon: Layers, href: '/all', count: 0 },
+        { name: 'Inbox', icon: Inbox, href: '/', count: counts.inbox },
+        { name: 'Today', icon: Sun, href: '/today', count: counts.today },
+        { name: 'Next 7 Days', icon: CalendarDays, href: '/next-7-days', count: counts.next7Days },
+        { name: 'Upcoming', icon: Calendar, href: '/upcoming', count: counts.upcoming },
+        { name: 'All Tasks', icon: Layers, href: '/all', count: counts.all },
     ]
 
     return (
@@ -45,12 +55,17 @@ export function MobileSidebar({ lists }: MobileSidebarProps) {
                                             key={link.name}
                                             variant="ghost"
                                             size="sm"
-                                            className="w-full justify-start"
+                                            className="w-full justify-between"
                                             asChild
                                         >
                                             <Link href={link.href}>
-                                                <link.icon className="mr-2 h-4 w-4" />
-                                                {link.name}
+                                                <div className="flex items-center">
+                                                    <link.icon className="mr-2 h-4 w-4" />
+                                                    {link.name}
+                                                </div>
+                                                {link.count > 0 && (
+                                                    <span className="text-xs text-muted-foreground">{link.count}</span>
+                                                )}
                                             </Link>
                                         </Button>
                                     ))}
@@ -65,10 +80,7 @@ export function MobileSidebar({ lists }: MobileSidebarProps) {
                     </ScrollArea>
                     
                     <div className="p-4 border-t">
-                        <Button variant="outline" className="w-full justify-start">
-                            <ListPlus className="mr-2 h-4 w-4" />
-                            New List
-                        </Button>
+                        <CreateListDialog />
                     </div>
                 </div>
             </SheetContent>

@@ -17,10 +17,12 @@ type TaskWithDetails = {
     description: string | null
     isCompleted: boolean
     date: Date | null
+    deadline: Date | null
     priority: string
+    recurrence: string | null
     list: { name: string, color: string | null }
-    labels: { name: string, color: string | null }[]
-    subTasks?: any[]
+    labels: { id: string, name: string, color: string | null }[]
+    subTasks?: { id: string; title: string; isCompleted: boolean }[]
     createdAt: Date
 }
 

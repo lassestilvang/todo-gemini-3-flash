@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
 import { getLists } from "@/app/actions/list";
+import { getTaskCounts } from "@/app/actions/task";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,7 +26,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const lists = await getLists();
+  const [lists, counts] = await Promise.all([
+      getLists(),
+      getTaskCounts()
+  ]);
 
   return (
     <html lang="en">
@@ -35,7 +39,7 @@ export default async function RootLayout({
         <Sidebar />
         <main className="flex-1 flex flex-col overflow-hidden">
              <div className="md:hidden p-4 border-b flex items-center">
-                 <MobileSidebar lists={lists} />
+                 <MobileSidebar lists={lists} counts={counts} />
                  <span className="font-bold ml-2">Gemini Tasks</span>
              </div>
              <div className="flex-1 overflow-y-auto">

@@ -16,20 +16,26 @@ export function SidebarNav({ lists }: SidebarNavProps) {
 
   return (
     <nav className="space-y-1">
-      {lists.filter(l => !l.isDefault).map((list) => (
-        <Button
-          key={list.id}
-          variant={pathname === `/list/${list.id}` ? 'secondary' : 'ghost'}
-          size="sm"
-          className="w-full justify-start"
-          asChild
-        >
-          <Link href={`/list/${list.id}`}>
-            <span className="mr-2">{list.icon || <ListIcon className="h-4 w-4" />}</span>
-            {list.name}
-          </Link>
-        </Button>
-      ))}
+      {lists.filter(l => !l.isDefault).map((list) => {
+        const textColor = list.color ? list.color.replace('bg-', 'text-') : 'text-foreground'
+        
+        return (
+          <Button
+            key={list.id}
+            variant={pathname === `/list/${list.id}` ? 'secondary' : 'ghost'}
+            size="sm"
+            className="w-full justify-start"
+            asChild
+          >
+            <Link href={`/list/${list.id}`}>
+              <span className={cn("mr-2 flex items-center justify-center w-4 h-4", textColor)}>
+                {list.icon || <ListIcon className="h-4 w-4" />}
+              </span>
+              {list.name}
+            </Link>
+          </Button>
+        )
+      })}
     </nav>
   )
 }
