@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model List {
+  id        String   @id @default(uuid())
+  name      String
+  color     String?  // Hex code or tailwind class
+  icon      String?  // Emoji
+  isDefault Boolean  @default(false) // For "Inbox"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks     Task[]
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  
+  // Scheduling
+  date        DateTime? // Scheduled date (Do date)
+  deadline    DateTime? // Due date
+  isAllDay    Boolean   @default(false)
+  
+  // Time tracking
+  estimate    Int?      // In minutes
+  actual      Int?      // In minutes
+
+  // Meta
+  priority    String    @default("NONE") // NONE, LOW, MEDIUM, HIGH
+  isCompleted Boolean   @default(false)
+  
+  // Recurrence
+  recurrence  String?   // "DAILY", "WEEKLY", "MONTHLY", "YEARLY", or Custom RRULE
+
+  // Relations
+  listId      String
+  list        List      @relation(fields: [listId], references: [id])
+  
+  subTasks    SubTask[]
+  labels      Label[]
+  attachments Attachment[]
+  logs        ActivityLog[]
+  reminders   Reminder[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SubTask {
+  id          String   @id @default(uuid())
+  title       String
+  isCompleted Boolean  @default(false)
+  
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Label {
+  id    String  @id @default(uuid())
+  name  String
+  color String?
+  icon  String?
+  
+  tasks Task[]
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  name      String
+  url       String   // Local path or remote URL
+  type      String?  // MIME type
+  size      Int?     // Bytes
+  
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String   // "CREATED", "UPDATED", "COMPLETED", "DELETED"
+  details   String?  // "Changed priority from LOW to HIGH"
+  timestamp DateTime @default(now())
+  
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Reminder {
+  id        String   @id @default(uuid())
+  time      DateTime
+  
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
