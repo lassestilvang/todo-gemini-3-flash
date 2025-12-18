@@ -66,18 +66,24 @@ const deleteSchema = z.object({ id: z.string().uuid() })
 
 export async function getTasks(filter: { 
     listId?: string, 
+    labelId?: string,
     date?: Date, 
     upcoming?: boolean,
     next7Days?: boolean,
     all?: boolean
 }) {
-  const where: {
-      listId?: string;
-      date?: { gte?: Date; lte?: Date; lt?: Date };
-  } = {}
+  const where: any = {}
 
   if (filter.listId) {
     where.listId = filter.listId
+  }
+
+  if (filter.labelId) {
+      where.labels = {
+          some: {
+              id: filter.labelId
+          }
+      }
   }
   
   if (filter.date) {
