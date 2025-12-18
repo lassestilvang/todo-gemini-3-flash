@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sparkles, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,8 +10,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 export function AIBriefing() {
+    const [mounted, setMounted] = useState(false)
     const [briefing, setBriefing] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const handleGenerate = async () => {
         setIsLoading(true)
@@ -24,6 +29,8 @@ export function AIBriefing() {
             setIsLoading(false)
         }
     }
+
+    if (!mounted) return null
 
     return (
         <Card className="border-primary/20 bg-primary/5 glass mb-8 overflow-hidden relative group">

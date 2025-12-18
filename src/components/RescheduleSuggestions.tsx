@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,8 +11,13 @@ import { AnimatePresence } from 'framer-motion'
 import * as chrono from 'chrono-node'
 
 export function RescheduleSuggestions() {
+    const [mounted, setMounted] = useState(false)
     const [suggestions, setSuggestions] = useState<{ taskId: string, suggestedDate: string, title: string }[] | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const handleFetch = async () => {
         setIsLoading(true)
@@ -41,6 +46,8 @@ export function RescheduleSuggestions() {
             setSuggestions(prev => prev ? prev.filter(s => s.taskId !== taskId) : null)
         }
     }
+
+    if (!mounted) return null
 
     return (
         <Card className="border-amber-500/20 bg-amber-500/5 glass mb-8 overflow-hidden relative">

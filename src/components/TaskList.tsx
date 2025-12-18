@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { TaskItem } from './TaskItem'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -43,7 +43,13 @@ interface TaskListProps {
 }
 
 export function TaskList({ tasks, listId, title }: TaskListProps) {
+    const [mounted, setMounted] = useState(false)
     const [newTaskTitle, setNewTaskTitle] = useState("")
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
     const [date, setDate] = useState<Date | undefined>(undefined)
     const [showCompleted, setShowCompleted] = useState(true)
     const [focusedTask, setFocusedTask] = useState<TaskListProps['tasks'][number] | null>(null)
@@ -51,7 +57,7 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
 
     // NLP Preview via useMemo to avoid cascading renders
     const nlpPreview = useMemo(() => {
-        if (!newTaskTitle.trim()) return null
+        if (!mounted || !newTaskTitle.trim()) return null
 
         const results = chrono.parse(newTaskTitle)
         const detectedDate = results.length > 0 ? results[0].start.date() : null
@@ -65,7 +71,7 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
             return { date: detectedDate, priority: detectedPriority }
         }
         return null
-    }, [newTaskTitle])
+    }, [newTaskTitle, mounted])
 
     const handleAddTask = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -89,6 +95,21 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
     }
 
     const filteredTasks = showCompleted ? tasks : tasks.filter(t => !t.isCompleted)
+
+    if (!mounted) {
+        return (
+            <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-8">
+                <header className="flex items-center justify-between">
+                    <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+                </header>
+                <div className="space-y-2">
+                    {tasks.map(task => (
+                        <div key={task.id} className="h-16 border rounded-lg animate-pulse bg-muted/20" />
+                    ))}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-8">
