@@ -7,7 +7,7 @@
 - [x] Task: Utility Functions for Recurrence (RRule) [59367ac]
   - [ ] Subtask: Write Tests (Unit tests for `getNextOccurrence` logic using `rrule`)
   - [ ] Subtask: Implement Feature (Create `lib/recurrence.ts` helper functions)
-- [ ] Task: Task Completion Logic Update
+- [x] Task: Task Completion Logic Update [900785b]
   - [ ] Subtask: Write Tests (Simulate completing a recurring task, expect new task creation)
   - [ ] Subtask: Implement Feature (Update `completeTask` server action to handle recurrence)
 
