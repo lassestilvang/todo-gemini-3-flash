@@ -4,7 +4,7 @@
 - [x] Task: Update Prisma Schema for Recurrence [19e13f0]
   - [ ] Subtask: Write Tests (Ensure schema changes are valid and migration runs)
   - [ ] Subtask: Implement Feature (Add `recurrenceRule` field to Task model, run migration)
-- [ ] Task: Utility Functions for Recurrence (RRule)
+- [x] Task: Utility Functions for Recurrence (RRule) [59367ac]
   - [ ] Subtask: Write Tests (Unit tests for `getNextOccurrence` logic using `rrule`)
   - [ ] Subtask: Implement Feature (Create `lib/recurrence.ts` helper functions)
 - [ ] Task: Task Completion Logic Update
