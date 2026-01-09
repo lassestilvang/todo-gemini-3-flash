@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { toggleTask, deleteTask } from '@/app/actions/task'
-import { Calendar, Trash2, Play, Zap } from 'lucide-react'
+import { Calendar, Trash2, Play, Zap, Repeat } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TaskDetail } from './TaskDetail'
 import { toast } from 'sonner'
@@ -97,6 +97,11 @@ export function TaskItem({ task, onFocus }: TaskItemProps) {
                                 <span className="w-2 h-2 rounded-full bg-primary/50" />
                                 {task.list.name}
                              </span>
+                        )}
+                        {task.recurrenceRule && (
+                            <span className="flex items-center gap-1 text-primary">
+                                <Repeat className="w-3 h-3" />
+                            </span>
                         )}
                         {task.date && (
                             <span className={cn(

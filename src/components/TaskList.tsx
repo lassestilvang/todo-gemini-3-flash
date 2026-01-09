@@ -19,6 +19,7 @@ import { AIBriefing } from './AIBriefing'
 import { RescheduleSuggestions } from './RescheduleSuggestions'
 import { VoiceCapture } from './VoiceCapture'
 import { useSound } from '@/lib/hooks/use-sound'
+import { RecurrencePicker } from './RecurrencePicker'
 
 interface TaskListProps {
     tasks: {
@@ -51,6 +52,7 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
     }, [])
 
     const [date, setDate] = useState<Date | undefined>(undefined)
+    const [recurrenceRule, setRecurrenceRule] = useState<string | null>(null)
     const [showCompleted, setShowCompleted] = useState(true)
     const [focusedTask, setFocusedTask] = useState<TaskListProps['tasks'][number] | null>(null)
     const { playSound } = useSound()
@@ -81,7 +83,8 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
             title: newTaskTitle,
             listId: listId,
             date: date,
-            priority: "NONE"
+            priority: "NONE",
+            recurrenceRule: recurrenceRule
         })
 
         if (result.error) {
@@ -90,6 +93,7 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
             playSound('click')
             setNewTaskTitle("")
             setDate(undefined)
+            setRecurrenceRule(null)
             toast.success("Task created")
         }
     }
@@ -186,6 +190,12 @@ export function TaskList({ tasks, listId, title }: TaskListProps) {
                             />
                         </PopoverContent>
                     </Popover>
+                    <div className="w-[140px] hidden lg:block">
+                        <RecurrencePicker 
+                            value={recurrenceRule} 
+                            onChange={setRecurrenceRule} 
+                        />
+                    </div>
                     <Button type="submit">
                         <Plus className="w-4 h-4 mr-2" />
                         Add
