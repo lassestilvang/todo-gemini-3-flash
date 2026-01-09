@@ -12,15 +12,15 @@
   - [ ] Subtask: Implement Feature (Update `completeTask` server action to handle recurrence)
 
 ## Phase 2: Frontend Integration
-- [ ] Task: Recurrence Input Component
+- [x] Task: Recurrence Input Component [f408197]
   - [ ] Subtask: Write Tests (Component test for selecting recurrence options)
   - [ ] Subtask: Implement Feature (Create `RecurrencePicker` component with options: Daily, Weekly, Custom)
-- [ ] Task: Integrate into Task Form
-  - [ ] Subtask: Write Tests (Integration test: Create task with recurrence)
-  - [ ] Subtask: Implement Feature (Add `RecurrencePicker` to `CreateTaskDialog` and `TaskDetail`)
-- [ ] Task: UI Indicators
-  - [ ] Subtask: Write Tests (Ensure icon renders for recurring tasks)
-  - [ ] Subtask: Implement Feature (Add recurrence icon to `TaskItem`)
+- [x] Task: Integrate into Task Form [c408662]
+  - [x] Subtask: Write Tests (Integration test: Create task with recurrence)
+  - [x] Subtask: Implement Feature (Add `RecurrencePicker` to `CreateTaskDialog` and `TaskDetail`)
+- [x] Task: UI Indicators [c408662]
+  - [x] Subtask: Write Tests (Ensure icon renders for recurring tasks)
+  - [x] Subtask: Implement Feature (Add recurrence icon to `TaskItem`)
 
 ## Phase 3: Validation
 - [ ] Task: End-to-End Testing
