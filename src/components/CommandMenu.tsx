@@ -19,7 +19,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { searchTasks } from "@/app/actions/task"
+import { searchTasks } from "@/app/actions/queries"
 import { useDebounce } from "@/lib/hooks/use-debounce"
 
 export function CommandMenu() {

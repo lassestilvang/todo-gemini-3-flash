@@ -1,4 +1,4 @@
-import { getAnalytics } from '@/app/actions/task'
+import { getAnalytics } from '@/app/actions/queries'
 import { AnalyticsCharts } from '@/components/AnalyticsCharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle2, ListTodo, Timer, Zap } from 'lucide-react'

@@ -1,4 +1,4 @@
-import { getTasks } from '@/app/actions/task'
+import { getTasks } from '@/app/actions/queries'
 import { KanbanBoard } from '@/components/KanbanBoard'
 
 export default async function BoardPage() {

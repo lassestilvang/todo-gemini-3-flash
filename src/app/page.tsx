@@ -1,4 +1,4 @@
-import { getTasks } from './actions/task'
+import { getTasks } from './actions/queries'
 import { TaskList } from '@/components/TaskList'
 import { prisma } from '@/lib/prisma'
 

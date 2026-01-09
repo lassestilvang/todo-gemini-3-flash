@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getLists } from '@/app/actions/list'
-import { getTaskCounts, getLabels } from '@/app/actions/task'
+import { getTaskCounts, getLabels } from '@/app/actions/queries'
 import { SidebarNav } from './SidebarNav'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Calendar, Sun, Inbox, CalendarDays, Layers, Tag, Layout, BarChart2 } from 'lucide-react'
