@@ -11,7 +11,7 @@
   - [ ] Subtask: Write Tests (Simulate completing a recurring task, expect new task creation)
   - [ ] Subtask: Implement Feature (Update `completeTask` server action to handle recurrence)
 
-## Phase 2: Frontend Integration
+## Phase 2: Frontend Integration [checkpoint: fbeaefc]
 - [x] Task: Recurrence Input Component [f408197]
   - [ ] Subtask: Write Tests (Component test for selecting recurrence options)
   - [ ] Subtask: Implement Feature (Create `RecurrencePicker` component with options: Daily, Weekly, Custom)
