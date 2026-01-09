@@ -43,6 +43,7 @@ model Task {
   
   // Recurrence
   recurrence  String?   // "DAILY", "WEEKLY", "MONTHLY", "YEARLY", or Custom RRULE
+  recurrenceRule String? // RFC 5545 RRULE string
 
   // Relations
   listId      String
