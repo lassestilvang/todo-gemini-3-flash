@@ -23,6 +23,7 @@ type TaskWithDetails = {
     priority: string
     energyLevel: string | null
     recurrence: string | null
+    recurrenceRule: string | null
     estimate: number | null
     actual: number | null
     list: { name: string, color: string | null }

@@ -14,6 +14,7 @@ import { Checkbox } from './ui/checkbox'
 import { Button } from './ui/button'
 import { updateTask, createSubTask, toggleSubTask, deleteSubTask, deleteTask, getLabels, addLabelToTask, removeLabelFromTask, addAttachment, deleteAttachment, addReminder, deleteReminder } from '@/app/actions/task'
 import { decomposeTask, suggestLabels } from '@/app/actions/ai'
+import { RecurrencePicker } from './RecurrencePicker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -33,6 +34,7 @@ type TaskWithSubtasks = {
     priority: string
     energyLevel: "LOW" | "MEDIUM" | "HIGH" | null
     recurrence: string | null
+    recurrenceRule: string | null
     estimate: number | null
     actual: number | null
     createdAt: Date
@@ -76,6 +78,7 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
         priority: string
         energyLevel: "LOW" | "MEDIUM" | "HIGH"
         recurrence: string
+        recurrenceRule: string
         estimate: string
         actual: string
     }>(
@@ -85,6 +88,7 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
         priority: task?.priority || 'NONE',
         energyLevel: (task?.energyLevel as "LOW" | "MEDIUM" | "HIGH") || 'MEDIUM',
         recurrence: task?.recurrence || 'NONE',
+        recurrenceRule: task?.recurrenceRule || '',
         estimate: task?.estimate?.toString() || '',
         actual: task?.actual?.toString() || ''
     })
@@ -101,6 +105,21 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
             getLabels().then(setAllLabels)
         }
     }, [open])
+
+    useEffect(() => {
+        if (task) {
+            setFormState({
+                title: task.title || '',
+                description: task.description || '',
+                priority: task.priority || 'NONE',
+                energyLevel: (task.energyLevel as "LOW" | "MEDIUM" | "HIGH") || 'MEDIUM',
+                recurrence: task.recurrence || 'NONE',
+                recurrenceRule: task.recurrenceRule || '',
+                estimate: task.estimate?.toString() || '',
+                actual: task.actual?.toString() || ''
+            })
+        }
+    }, [task])
 
     if (!task) return null
 
@@ -282,25 +301,13 @@ export function TaskDetail({ task, open, onOpenChange }: TaskDetailProps) {
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Recurrence</label>
-                        <Select 
-                            value={formState.recurrence} 
-                            onValueChange={(val) => {
-                                handleFieldChange('recurrence', val)
-                                handleUpdate({ recurrence: val === 'NONE' ? null : val })
+                        <RecurrencePicker 
+                            value={formState.recurrenceRule || null} 
+                            onChange={(val) => {
+                                handleFieldChange('recurrenceRule', val || '')
+                                handleUpdate({ recurrenceRule: val })
                             }}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Set Recurrence" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="NONE">None</SelectItem>
-                                <SelectItem value="DAILY">Daily</SelectItem>
-                                <SelectItem value="WEEKLY">Weekly</SelectItem>
-                                <SelectItem value="WEEKDAYS">Every Weekday</SelectItem>
-                                <SelectItem value="MONTHLY">Monthly</SelectItem>
-                                <SelectItem value="YEARLY">Yearly</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

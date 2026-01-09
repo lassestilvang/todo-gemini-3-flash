@@ -15,40 +15,12 @@ const createTaskSchema = z.object({
     date: z.date().nullable().optional(),
     description: z.string().max(2000).nullable().optional(),
     priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]).default("NONE"),
-    energyLevel: z.enum(["LOW", "MEDIUM", "HIGH"]).optional()
+    energyLevel: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
+    recurrenceRule: z.string().nullable().optional()
 })
 
 function parseNLP(input: string) {
-    let title = input
-    let date: Date | null = null
-    let priority: "NONE" | "LOW" | "MEDIUM" | "HIGH" = "NONE"
-
-    // Parse Priority (e.g., !!high, !!med, !!low or p1, p2, p3)
-    if (title.includes('!!high') || title.includes('p1')) {
-        priority = "HIGH"
-        title = title.replace(/!!high|p1/gi, '')
-    } else if (title.includes('!!med') || title.includes('p2')) {
-        priority = "MEDIUM"
-        title = title.replace(/!!med|p2/gi, '')
-    } else if (title.includes('!!low') || title.includes('p3')) {
-        priority = "LOW"
-        title = title.replace(/!!low|p3/gi, '')
-    }
-
-    // Parse Date
-    const results = chrono.parse(title)
-    if (results.length > 0) {
-        date = results[0].start.date()
-        title = title.replace(results[0].text, '')
-    }
-
-    return {
-        title: title.trim().replace(/\s+/g, ' '),
-        date,
-        priority
-    }
-}
-
+// ...
 const updateTaskSchema = z.object({
     id: z.string().uuid(),
     title: z.string().min(1).max(200).optional(),
@@ -59,6 +31,7 @@ const updateTaskSchema = z.object({
     energyLevel: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
     isCompleted: z.boolean().optional(),
     recurrence: z.string().nullable().optional(),
+    recurrenceRule: z.string().nullable().optional(),
     estimate: z.number().nullable().optional(),
     actual: z.number().nullable().optional()
 })
@@ -210,7 +183,8 @@ export const createTask = createSafeAction(createTaskSchema, async (data) => {
             date: finalDate,
             description: data.description,
             priority: finalPriority,
-            energyLevel: data.energyLevel || "MEDIUM"
+            energyLevel: data.energyLevel || "MEDIUM",
+            recurrenceRule: data.recurrenceRule
         }
     })
     
