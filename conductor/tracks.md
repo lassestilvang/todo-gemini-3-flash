@@ -1,1 +1,3 @@
-# Project Tracks\n\nThis file tracks all major tracks for the project. Each track has its own detailed plan in its respective folder.\n\n---\n\n## [ ] Track: Implement Task Recurrence Logic\n*Link: [./conductor/tracks/recurrence_20260109/](./conductor/tracks/recurrence_20260109/)*
+# Project Tracks
+
+This file tracks all major tracks for the project. Each track has its own detailed plan in its respective folder.

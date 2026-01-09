@@ -23,6 +23,6 @@
   - [x] Subtask: Implement Feature (Add recurrence icon to `TaskItem`)
 
 ## Phase 3: Validation
-- [ ] Task: End-to-End Testing
+- [x] Task: End-to-End Testing [fbeaefc]
   - [ ] Subtask: Write Tests (Full flow: Create recurring task -> Complete it -> Verify next task appears)
   - [ ] Subtask: Implement Feature (Run E2E tests and fix any bugs)
