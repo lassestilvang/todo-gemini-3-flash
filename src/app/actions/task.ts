@@ -6,6 +6,7 @@ import { RRule } from 'rrule'
 import { z } from 'zod'
 import { createSafeAction, ActionError } from '@/lib/actions/utils'
 import * as chrono from 'chrono-node'
+import { getNextOccurrence } from '@/lib/recurrence'
 
 // Validation Schemas
 const createTaskSchema = z.object({
@@ -231,51 +232,58 @@ export async function toggleTask(id: string, isCompleted: boolean) {
 
         await logActivity(task.id, isCompleted ? "COMPLETED" : "UNCOMPLETED")
 
-        if (isCompleted && task.recurrence && task.date) {
-            let rule: RRule | null = null
-            const date = new Date(task.date)
+        if (isCompleted && task.date && (task.recurrence || task.recurrenceRule)) {
+            let nextDate: Date | null = null
 
-            switch (task.recurrence) {
-                case 'DAILY':
-                    rule = new RRule({ freq: RRule.DAILY, dtstart: date })
-                    break
-                case 'WEEKLY':
-                    rule = new RRule({ freq: RRule.WEEKLY, dtstart: date })
-                    break
-                case 'WEEKDAYS':
-                    rule = new RRule({ freq: RRule.WEEKLY, byweekday: [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR], dtstart: date })
-                    break
-                case 'MONTHLY':
-                    rule = new RRule({ freq: RRule.MONTHLY, dtstart: date })
-                    break
-                case 'YEARLY':
-                    rule = new RRule({ freq: RRule.YEARLY, dtstart: date })
-                    break
+            if (task.recurrenceRule) {
+                nextDate = getNextOccurrence(task.recurrenceRule, task.date)
+            } else if (task.recurrence) {
+                let rule: RRule | null = null
+                const date = new Date(task.date)
+
+                switch (task.recurrence) {
+                    case 'DAILY':
+                        rule = new RRule({ freq: RRule.DAILY, dtstart: date })
+                        break
+                    case 'WEEKLY':
+                        rule = new RRule({ freq: RRule.WEEKLY, dtstart: date })
+                        break
+                    case 'WEEKDAYS':
+                        rule = new RRule({ freq: RRule.WEEKLY, byweekday: [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR], dtstart: date })
+                        break
+                    case 'MONTHLY':
+                        rule = new RRule({ freq: RRule.MONTHLY, dtstart: date })
+                        break
+                    case 'YEARLY':
+                        rule = new RRule({ freq: RRule.YEARLY, dtstart: date })
+                        break
+                }
+                if (rule) {
+                    nextDate = rule.after(date)
+                }
             }
 
-            if (rule) {
-                const nextDate = rule.after(date)
-                if (nextDate) {
-                    await prisma.task.create({
-                        data: {
-                            title: task.title,
-                            description: task.description,
-                            date: nextDate,
-                            priority: task.priority,
-                            listId: task.listId,
-                            recurrence: task.recurrence,
-                            labels: {
-                                connect: task.labels.map(l => ({ id: l.id }))
-                            },
-                            subTasks: {
-                                create: task.subTasks.map(st => ({
-                                    title: st.title,
-                                    isCompleted: false
-                                }))
-                            }
+            if (nextDate) {
+                await prisma.task.create({
+                    data: {
+                        title: task.title,
+                        description: task.description,
+                        date: nextDate,
+                        priority: task.priority,
+                        listId: task.listId,
+                        recurrence: task.recurrence,
+                        recurrenceRule: task.recurrenceRule,
+                        labels: {
+                            connect: task.labels.map(l => ({ id: l.id }))
+                        },
+                        subTasks: {
+                            create: task.subTasks.map(st => ({
+                                title: st.title,
+                                isCompleted: false
+                            }))
                         }
-                    })
-                }
+                    }
+                })
             }
         }
 
