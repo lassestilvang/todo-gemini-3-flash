@@ -53,19 +53,17 @@ graph TD
     Drizzle --> SQLite[(SQLite Database)]
     UI --> SC[Server Components]
     SC --> Drizzle
-    
+
     subgraph Core_Logic [Core Logic]
         NLP[NLP Parser]
         Recurring[Recurring Task Engine]
         Search[Fuzzy Search Engine]
     end
-    
+
     UI --> NLP
     SA --> Recurring
     UI --> Search
 ```
-
-
 
 ## Implementation Phases
 
@@ -120,5 +118,3 @@ graph TD
 - Use Next.js 16 View Transitions API for smooth navigation between views.
 
 ### 8. Testing and Optimization
-
-- Unit tests for recurring logic and NLP parsing using `bun:test`.
