@@ -1,7 +1,7 @@
 # Track Plan: Implement Task Recurrence Logic
 
 ## Phase 1: Backend & Data Model
-- [ ] Task: Update Prisma Schema for Recurrence
+- [x] Task: Update Prisma Schema for Recurrence [19e13f0]
   - [ ] Subtask: Write Tests (Ensure schema changes are valid and migration runs)
   - [ ] Subtask: Implement Feature (Add `recurrenceRule` field to Task model, run migration)
 - [ ] Task: Utility Functions for Recurrence (RRule)
