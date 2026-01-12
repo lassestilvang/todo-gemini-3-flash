@@ -1,0 +1,8 @@
+{
+  "track_id": "calendar_sync_20260110",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-10T11:00:00Z",
+  "updated_at": "2026-01-10T11:00:00Z",
+  "description": "Two-way sync with local/iCal calendars (Google, Outlook, iCloud)"
+}
